@@ -59,6 +59,8 @@ docker compose run --rm backend python3 main.py --url "https://www.youtube.com/w
 - Another asupmtion is that the video could come in some forms, not only in a file format. I added the Youtube (and others) compatibility
 - I assumed the user would have an OpenAI API Key
 - Another assumption is that the challenge needs coverage tests in backend and frontend
+- Another assumption is that i was allowed to use public LLMs like OpenAI instead of building my own model or using open source models like Qwen2.5-VL that provides better OCR capabilites and noticing details in videos or even Llama 3.2 Vision
+- What I prioritized was to deliver a working product that could be used by the user, so i prioritized the frontend and backend to be functional and easy to use, instead of focusing on the model itself.
 
 ## Future Improvements
 With more time, I would:
@@ -68,3 +70,4 @@ With more time, I would:
 4.  **Enhanced Testing**: Add integration tests specifically for the video processing pipeline.
 5.  **Add Frontend Tests**: Add frontend tests to ensure the frontend is working as expected with tests
 6.  **CI/CD**: Add CI/CD pipeline to run the tests and  run the script to update the coverage badges
+7.  **Open Source Strategy**: While this MVP uses OpenAI for velocity, the architecture (/interfaces) is designed to support Qwen2.5-VL (via Together AI) or Llama 3.2 (via Groq) if we add it as another Provider in /provider
