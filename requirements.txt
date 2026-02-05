@@ -1,0 +1,6 @@
+openai
+pydantic
+typer
+python-dotenv
+rich
+opencv-python
