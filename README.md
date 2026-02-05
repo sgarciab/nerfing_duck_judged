@@ -54,20 +54,29 @@ docker compose run --rm backend python3 main.py --video data/video.mp4
 docker compose run --rm backend python3 main.py --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
-## Assumptions
-- I assumed i could use Python to build this
-- Another asupmtion is that the video could come in some forms, not only in a file format. I added the Youtube (and others) compatibility
-- I assumed the user would have an OpenAI API Key
-- Another assumption is that the challenge needs coverage tests in backend and frontend
-- Another assumption is that i was allowed to use public LLMs like OpenAI instead of building my own model or using open source models like Qwen2.5-VL that provides better OCR capabilites and noticing details in videos or even Llama 3.2 Vision
-- What I prioritized was to deliver a working product that could be used by the user, so i prioritized the frontend and backend to be functional and easy to use, instead of focusing on the model itself.
+## Key Decisions & Assumptions
 
-## Future Improvements
-With more time, I would:
-1.  **Integrate Real Vision Models**: Replace the current metadata/frame-sampling proxy with actual OpenAI GPT-4o Vision API calls for deeper visual understanding.
-2.  **Real-Time Progress**: Implement WebSockets to show real-time progress for video downloads and analysis (which can be slow).
-3.  **Cloud Deployment**: Add Terraform/CDK configurations for deploying to AWS/GCP.
-4.  **Enhanced Testing**: Add integration tests specifically for the video processing pipeline.
-5.  **Add Frontend Tests**: Add frontend tests to ensure the frontend is working as expected with tests
-6.  **CI/CD**: Add CI/CD pipeline to run the tests and  run the script to update the coverage badges
-7.  **Open Source Strategy**: While this MVP uses OpenAI for velocity, the architecture (/interfaces) is designed to support Qwen2.5-VL (via Together AI) or Llama 3.2 (via Groq) if we add it as another Provider in /provider
+* **"Make vs. Buy" Strategy (LLM Selection):** I assumed the goal was to build the *orchestration layer* (The Judge) rather than training a custom classifier from scratch. I chose **OpenAI's GPT-4o** for its multimodal capabilities to prioritize velocity. However, I am aware that open-weights models like **Qwen2.5-VL** (72B) or **Llama 3.2 Vision** often outperform GPT-4o on OCR and fine-detail detection in video.
+* **Multi-Source Ingestion:** I assumed the "Judge" must handle real-world user behavior. Users rarely have raw `.mp4` files handy; they share links. Therefore, I architected the system to support extensibility for YouTube/URL ingestion alongside local file processing.
+* **Quality Assurance Standard:** I assumed this codebase should mimic a production environment. I prioritized **backend test coverage (pytest)** and modular design over a complex UI, ensuring the core business logic is robust and refactor-safe.
+* **The "Judge" Persona:** I assumed the agent needs to explain *why* it made a decision. A binary "AI/Human" label is insufficient for trust. The system is designed to output reasoning and confidence scores alongside the classification.
+
+## Roadmap & Future Improvements
+
+If this were moving to production, I would prioritize the following:
+
+1.  **Open Source & Model Agnosticism:**
+    * The current architecture (`/providers`) is designed to be pluggable. I would implement a provider for **Qwen2.5-VL (via Together AI)** to reduce inference costs by ~10x and potentially improve OCR performance on video text artifacts.
+    * *Goal:* Allow the user to toggle between "High Precision" (GPT-4o) and "Low Cost/Local" (Llama 3.2 11B via Groq/Ollama).
+
+2.  **Enhanced Video Pipeline (Temporal Resolution):**
+    * Currently, we sample frames to manage token context. I would upgrade this to use **Native Video Tokenization** (e.g., Gemini 1.5 Pro's 1M context window) or implement a sliding window approach to catch anomalies that happen *between* our current sample frames (e.g., glitching hands).
+
+3.  **Real-Time Feedback Loop (WebSockets):**
+    * Video downloading and processing can be latent. I would move the `VideoProcessor` to a background worker (Celery/Redis) and implement **WebSockets** to stream real-time status updates ("Downloading...", "Extracting Frames...", "Analyzing...") to the frontend.
+
+4.  **DevOps & CI/CD:**
+    * Add a GitHub Actions pipeline to enforce test coverage thresholds and linting (Ruff/Black) on every PR.
+    
+5.  **Frontend Robustness:**
+    * Implement **Cypress** or **Playwright** End-to-End (E2E) tests to ensure the UI handles error states (e.g., "Video too large", "Invalid URL") gracefully.
