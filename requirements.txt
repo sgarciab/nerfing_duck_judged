@@ -4,3 +4,4 @@ typer
 python-dotenv
 rich
 opencv-python
+moviepy
