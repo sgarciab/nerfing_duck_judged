@@ -62,5 +62,12 @@ View all available options:
 python3 main.py --help
 ```
 
+## Testing
+Run the unit suite to verify logic without API usage:
+```bash
+source .venv/bin/activate
+pytest tests/
+```
+
 ## Documentation
 See [AGENTS.md](./AGENTS.md) for detailed architectural guidelines and agent definitions.

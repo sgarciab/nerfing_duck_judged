@@ -110,12 +110,24 @@ Bad: def analyze(content):
 
 Good: def analyze(content: str | Path) -> JudgeOutput:
 
-## 6. 🧪 Testing Strategy (Benefit of DI)
+## 6. 🧪 Testing Strategy
 Because we use DI, we can easily create a Mock Run without hitting the API.
 
-Create a MockLLMProvider that returns a static JudgeOutput JSON.
+### Unit Tests
+We use `pytest` for unit testing. The tests are located in the `tests/` directory and mirror the source code structure.
 
-Inject this mock into JudgeService during development to iterate on the CLI UI without spending tokens.
+- **Service Tests**: Verify business logic and prompt construction.
+- **Provider Tests**: specific behavior of `OpenAI` and `OpenCV` wrappers (mocked).
+- **CLI Tests**: Verify argument parsing and command execution.
+
+To run the tests:
+```bash
+source .venv/bin/activate
+pytest tests/
+```
+
+### Mock Mode
+Create a `MockLLMProvider` that returns a static `JudgeOutput` JSON. Inject this mock into `JudgeService` during development to iterate on the CLI UI without spending tokens.
 
 ## 7. 🐍 Environment & Dependency Management
 
@@ -141,4 +153,4 @@ All development MUST be done within a virtual environment.
   
 ## 6. Use of .venv
 
-Obligatory. For executing commands, always use the .venv environment, when you need to execute command, always activate the .venv environment first with the command: source .venv/bin/activate
+Obligatory: For executing commands, always use the .venv environment, when you need to execute command, always activate the .venv environment first with the command: source .venv/bin/activate
