@@ -1,118 +1,70 @@
 # FeltSense Challenge
 
-![Tests](https://img.shields.io/badge/tests-failing-red) ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-passing-green) ![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)
 
-## Overview
-FeltSense is a content intelligence layer designed to navigate the "Post-Truth" internet. This repository contains the backend challenge for building the "Judge Agent".
+## What I Built
+I built a **Multimodal Content Intelligence System** (the "Judge Agent") designed to analyze digital content for authenticity, virality, and audience fit. The system features a **Service-Oriented Backend** (FastAPI) that orchestrates analysis logic and a **React Frontend** (Vite + Tailwind CSS) that allows users to analyze Text, Local Videos, and YouTube URLs seamlessly. If the interface is not wanted, you can always use the CLI tools directly. Examples below
 
-## 🐳 Quick Start with Docker (Recommended)
+## Prerequisites 
+The **only thing you need** to run this project is an **OpenAI API Key**.
+The system uses GPT-4o for its multimodal analysis capabilities.
 
-Want to run the whole app without installing Python or Node.js locally? We've got you covered!
+1.  Create a `.env` file in the root directory.
+2.  Add your key:
+    ```bash
+    OPENAI_API_KEY=sk-your-key-here
+    ```
 
-### 1. Run Everything
-To start both the Backend (API) and Frontend:
+## How to Run It
+
+### 🚀 Option A: The Web Application (RECOMMENDED)
+The easiest way to see the full system in action is using Docker Compose.
+
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
-- **Frontend**: Open [http://localhost:3000](http://localhost:3000)
-- **Backend API**: Running at [http://localhost:8000](http://localhost:8000)
+This command spins up both the Backend API and the Frontend React App.
 
-### 2. Run the CLI
-You can also use the Typer CLI within the Docker container to analyze content independently:
+- **Frontend Access**: [http://localhost:5173](http://localhost:5173) (Open this in your browser!)
+- **Backend Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-**Analyze Text:**
-```bash
-docker-compose run --rm backend python main.py "Suspicious crypto scheme" --mock
-```
-
-**Analyze YouTube Video:**
-```bash
-docker-compose run --rm backend python main.py --url https://www.youtube.com/watch?v=dQw4w9WgXcQ
-```
+**Capabilities in the Web App:**
+1.  **Text Analysis**: Paste any text to detect AI generation.
+2.  **Video Upload**: Upload a local video file directly.
+3.  **YouTube Analysis**: Paste a YouTube URL for automatic download and analysis.
 
 ---
 
-## Setup
+### 💻 Option B: Command Line Interface (CLI)
+You can also run the agent tools directly via Docker, without installing Python locally.
 
-### Prerequisites
-- Linux
-- Python 3.10+
-
-### Installation
-
-1. **System Dependencies**
-   Ensure you have the Python 3.12 venv package installed:
-   ```bash
-   sudo apt install python3.12-venv
-   ```
-
-2. **Virtual Environment**
-   Run the setup script to create and configure your virtual environment:
-   ```bash
-   ./setup_venv.sh
-   source .venv/bin/activate
-   ```
-
-3. **Dependencies**
-   Install Python dependencies (once you have added them to requirements.txt):
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-The Agent handles both text and video inputs.
-
-**Important:** Always run commands within the virtual environment:
+**1. Analyze Text**
 ```bash
-source .venv/bin/activate
+docker compose run --rm backend python3 main.py "This is a suspicious post about cryptocurrency" --context "Twitter"
 ```
 
-### 1. Analyze Text Content
-Use the mock provider (no API key needed):
+**2. Analyze Local Video**
+(Uses the sample video mapped in `data/`)
 ```bash
-python3 main.py "This is a suspicious post about cryptocurrency" --mock --context "Twitter"
+docker compose run --rm backend python3 main.py --video data/video.mp4
 ```
 
-Use the real OpenAI provider (requires `.env` setup):
+**3. Analyze YouTube URL**
 ```bash
-python3 main.py "Just saw this amazing new tech!" --context "Reddit"
+docker compose run --rm backend python3 main.py --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
-### 2. Analyze Video Content
-The agent now supports deep multimodal analysis including:
-- **Frame Extraction**: Visual analysis of key frames.
-- **Audio Transcription**: Speech-to-text analysis using Whisper.
-- **Metadata**: Technical video properties.
+## Assumptions
+- I assumed i could use Python to build this
+- Another asupmtion is that the video could come in some forms, not only in a file format. I added the Youtube (and others) compatibility
+- I assumed the user would have an OpenAI API Key
+- Another assumption is that the challenge needs coverage tests in backend and frontend
 
-**Local Video:**
-```bash
-python3 main.py --video path/to/video.mp4
-```
-
-**YouTube URL:**
-The agent can automatically download and analyze YouTube videos:
-```bash
-python3 main.py --url https://www.youtube.com/watch?v=dQw4w9WgXcQ
-```
-
-### 3. Help
-View all available options:
-```bash
-python3 main.py --help
-```
-
-## Testing
-Run the unit suite to verify logic without API usage:
-```bash
-source .venv/bin/activate
-pytest
-```
-
-This project uses `pytest-cov` for test coverage. The configuration in `pytest.ini` automatically enables coverage reporting.
-
-- **Terminal Report**: A summary of coverage by file will be displayed after running tests.
-- **HTML Report**: A detailed, interactive report is generated in `htmlcov/index.html`. You can view it by opening the file in your browser.
-
-## Documentation
-See [AGENTS.md](./AGENTS.md) for detailed architectural guidelines and agent definitions.
+## Future Improvements
+With more time, I would:
+1.  **Integrate Real Vision Models**: Replace the current metadata/frame-sampling proxy with actual OpenAI GPT-4o Vision API calls for deeper visual understanding.
+2.  **Real-Time Progress**: Implement WebSockets to show real-time progress for video downloads and analysis (which can be slow).
+3.  **Cloud Deployment**: Add Terraform/CDK configurations for deploying to AWS/GCP.
+4.  **Enhanced Testing**: Add integration tests specifically for the video processing pipeline.
+5.  **Add Frontend Tests**: Add frontend tests to ensure the frontend is working as expected with tests
+6.  **CI/CD**: Add CI/CD pipeline to run the tests and  run the script to update the coverage badges
