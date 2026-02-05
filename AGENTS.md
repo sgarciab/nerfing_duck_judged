@@ -1,10 +1,8 @@
-> **SYSTEM CONTEXT**: FeltSense - Stage 2 Take-Home Challenge
-> **ROLE**: Senior Backend Architect
 > **ARCHITECTURAL STYLE**: Service-Oriented with Dependency Injection (Clean Architecture Lite)
 
 ---
 
-## 1. 💼 Business Domain & Value Proposition
+## 1. Business Domain & Value Proposition
 
 ### What is FeltSense?
 FeltSense is a content intelligence layer designed to navigate the "Post-Truth" internet. As AI-generated content floods social platforms, human creators and platforms need a distinct way to measure **Authenticity** and **Impact**.
@@ -22,7 +20,7 @@ We are building the core evaluation engine—a "Judge"—that acts as an automat
 
 ---
 
-## 2. 🏗 Proposed Architecture
+## 2.  Proposed Architecture
 
 We utilize a **Layered Architecture** with **Manual Dependency Injection**. This ensures our core business logic is decoupled from external vendors (OpenAI) and input methods (CLI), making the system testable and modular.
 
@@ -54,7 +52,7 @@ We utilize a **Layered Architecture** with **Manual Dependency Injection**. This
 
 ---
 
-## 3. 💉 Dependency Injection Strategy
+## 3.  Dependency Injection Strategy
 
 We avoid heavy DI frameworks (like `dependency_injector`) for this MVP to maintain velocity, but we strictly adhere to the **Dependency Inversion Principle**.
 
@@ -70,7 +68,7 @@ class JudgeService:
         self.video = video_processor
 
 ---
-## 4. 📂 Folder Structure (Strict)
+## 4.  Folder Structure (Strict)
 Plaintext
 
 feltsense_challenge/
@@ -87,7 +85,7 @@ feltsense_challenge/
 │   └── protocols.py
 └── requirements.txt
 
-## 5. 🤖 Agent Coding Standards
+## 5. Agent Coding Standards
 ### Rule 1: The "No-Import" Service Rule
 The JudgeService MUST NOT import openai or cv2 directly. It should only import from interfaces or providers (if skipping strict interfaces for speed).
 
@@ -110,7 +108,7 @@ Bad: def analyze(content):
 
 Good: def analyze(content: str | Path) -> JudgeOutput:
 
-## 6. 🧪 Testing Strategy
+## 6. Testing Strategy
 Because we use DI, we can easily create a Mock Run without hitting the API.
 
 ### Unit Tests
@@ -129,7 +127,7 @@ pytest tests/
 ### Mock Mode
 Create a `MockLLMProvider` that returns a static `JudgeOutput` JSON. Inject this mock into `JudgeService` during development to iterate on the CLI UI without spending tokens.
 
-## 7. 🐍 Environment & Dependency Management
+## 7. Environment & Dependency Management
 
 ### Rule 1: Strict Python Version
 The project MUST run on **Python 3.10+**.
@@ -150,6 +148,9 @@ All development MUST be done within a virtual environment.
 - Dependencies are managed in `requirements.txt`.
 - Always update this file when adding new packages:
   ```bash
+  pip install -r requirements.txt
+  ```
+  
   
 ## 6. Use of .venv
 

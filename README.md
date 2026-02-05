@@ -3,7 +3,7 @@
 ![Tests](https://img.shields.io/badge/tests-passing-green) ![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)
 
 ## What I Built
-I built a **Multimodal Content Intelligence System** (the "Judge Agent") designed to analyze digital content for authenticity, virality, and audience fit. The system features a **Service-Oriented Backend** (FastAPI) that orchestrates analysis logic and a **React Frontend** (Vite + Tailwind CSS) that allows users to analyze Text, Local Videos, and YouTube URLs seamlessly. If the interface is not wanted, you can always use the CLI tools directly. Examples below
+I built a **Multimodal Content Intelligence System** (the "Judge Agent") designed to analyze digital content for authenticity, virality, and audience fit. The system features a **Service-Oriented Backend** (FastAPI) that orchestrates analysis logic and a **React Frontend** (Vite + Tailwind CSS) that allows users to analyze Text, Local Videos, and YouTube URLs seamlessly. If the interface is not wanted, you can always use the CLI tools directly(Typer). Examples below
 
 ## Prerequisites 
 The **only thing you need** to run this project is an **OpenAI API Key**.
@@ -40,7 +40,7 @@ You can also run the agent tools directly via Docker, without installing Python 
 
 **1. Analyze Text**
 ```bash
-docker compose run --rm backend python3 main.py "This is a suspicious post about cryptocurrency" --context "Twitter"
+docker compose run --rm backend python3 main.py "This is a suspicious post about cryptocurrency" 
 ```
 
 **2. Analyze Local Video**
@@ -54,14 +54,17 @@ docker compose run --rm backend python3 main.py --video data/video.mp4
 docker compose run --rm backend python3 main.py --url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
-## Key Decisions & Assumptions
+## Assumptions
 
 * **"Make vs. Buy" Strategy (LLM Selection):** I assumed the goal was to build the *orchestration layer* (The Judge) rather than training a custom classifier from scratch. I chose **OpenAI's GPT-4o** for its multimodal capabilities to prioritize velocity. However, I am aware that open-weights models like **Qwen2.5-VL** (72B) or **Llama 3.2 Vision** often outperform GPT-4o on OCR and fine-detail detection in video.
 * **Multi-Source Ingestion:** I assumed the "Judge" must handle real-world user behavior. Users rarely have raw `.mp4` files handy; they share links. Therefore, I architected the system to support extensibility for YouTube/URL ingestion alongside local file processing.
-* **Quality Assurance Standard:** I assumed this codebase should mimic a production environment. I prioritized **backend test coverage (pytest)** and modular design over a complex UI, ensuring the core business logic is robust and refactor-safe.
-* **The "Judge" Persona:** I assumed the agent needs to explain *why* it made a decision. A binary "AI/Human" label is insufficient for trust. The system is designed to output reasoning and confidence scores alongside the classification.
 
-## Roadmap & Future Improvements
+* **Quality Assurance Standard:** I assumed this codebase should mimic a production environment. I prioritized **backend test coverage (pytest)** and modular design over a complex UI, ensuring the core business logic is robust and refactor-safe, along with dependency injection for better testability.
+
+* **No Audio Analysis:** Transcripion analysis is implemented in the current version of the Judge Agent but a different aproach would be analyze the audio to detect if it is a real person speaking or a machine or even having an emotion analysis would be great.
+
+
+##  Improvements if I had more time
 
 If this were moving to production, I would prioritize the following:
 
@@ -76,7 +79,20 @@ If this were moving to production, I would prioritize the following:
     * Video downloading and processing can be latent. I would move the `VideoProcessor` to a background worker (Celery/Redis) and implement **WebSockets** to stream real-time status updates ("Downloading...", "Extracting Frames...", "Analyzing...") to the frontend.
 
 4.  **DevOps & CI/CD:**
-    * Add a GitHub Actions pipeline to enforce test coverage thresholds and linting (Ruff/Black) on every PR.
-    
+    * Add a GitHub Actions pipeline to enforce test coverage thresholds and linting (Ruff/Black) on every PR and besides that, I would add a pipeline to build and push the Docker images to a registry (e.g., Docker Hub) on every push to main and also creating the report of coverage and linting and uploading it to GitHub. At the momment we already have the update_badges.sh script that run the tests and update the badges.
+
 5.  **Frontend Robustness:**
     * Implement **Cypress** or **Playwright** End-to-End (E2E) tests to ensure the UI handles error states (e.g., "Video too large", "Invalid URL") gracefully.
+
+6.  **Change Model in Frontend:**
+    * Add a dropdown to select the model to use (e.g., "GPT-4o", "Qwen2.5-VL", "Llama 3.2 11B"). For now the gpt-4o is the default model in the Backend when using the Web Application.
+
+7.  **Use Langchain or other tools:**
+    * Use Langchain to build the Judge Agent, so we can more easily extend it with more tools and capabilities, like RAG/Actions/Tools and the other cool stuff Langchain provides. The tradeoff is that it will be more complex to set up and maintain, but it will be more flexible and easier to extend. LlamaIndex is another option that can be used to build the Judge Agent if some advanced RAG is needed.
+    For now the current implementation is simple and easy to maintain with a really simple RAG implementation which in this case the extraction of the text from the video, the audio to get the transcription and the analysis of the text.
+
+8.  **Use Redis for Caching:**
+    * Use Redis to cache the results of the Judge Agent, so we can avoid re-analyzing the same video multiple times.
+
+9.  **Emotion Analysis:**
+    * Use a pre-trained model to analyze the emotions in the video and the audio.

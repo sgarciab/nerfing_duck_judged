@@ -36,14 +36,12 @@ async def analyze_content(
 ):
     temp_file_path = None
     try:
-        # Handle file upload if present
         if file:
             temp_file_path = f"temp_{file.filename}"
             with open(temp_file_path, "wb") as buffer:
                 content = await file.read()
                 buffer.write(content)
         
-        # Create input object
         input_data = ContentInput(
             text=text,
             url=url,
@@ -55,12 +53,10 @@ async def analyze_content(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        # Cleanup temp file if it was created and still exists
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.remove(temp_file_path)
             except Exception as e:
-                # Log error but don't fail the request (though request is already done)
                 print(f"Failed to delete temp file {temp_file_path}: {e}")
 
 container.wire(modules=[__name__])
