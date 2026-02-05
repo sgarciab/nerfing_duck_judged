@@ -138,6 +138,7 @@ All development MUST be done within a virtual environment.
 - Dependencies are managed in `requirements.txt`.
 - Always update this file when adding new packages:
   ```bash
-  pip freeze > requirements.txt
-  ```
+  
+## 6. Use of .venv
 
+Obligatory. For executing commands, always use the .venv environment, when you need to execute command, always activate the .venv environment first with the command: source .venv/bin/activate
