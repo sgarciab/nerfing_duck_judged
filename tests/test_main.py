@@ -58,7 +58,7 @@ class TestMainCLI:
     def test_analyze_missing_args(self):
         result = runner.invoke(app, [])
         assert result.exit_code == 1
-        assert "You must provide either text content argument or a --video path" in result.stdout
+        assert "You must provide text content, a --video path, or a --url" in result.stdout
 
     @patch.dict('os.environ', {}, clear=True)
     def test_analyze_missing_api_key(self):
@@ -66,3 +66,67 @@ class TestMainCLI:
         result = runner.invoke(app, ["Test"])
         assert result.exit_code == 1
         assert "OPENAI_API_KEY not found" in result.stdout
+
+    @patch('main.JudgeService')
+    @patch('main.MockLLMProvider')
+    @patch('main.LocalVideoProcessor')
+    def test_analyze_command_url_success(self, mock_video_cls, mock_llm_cls, mock_judge_cls):
+        # Setup
+        mock_judge_instance = MagicMock()
+        mock_judge_cls.return_value = mock_judge_instance
+        
+        mock_video_instance = MagicMock()
+        mock_video_cls.return_value = mock_video_instance
+        mock_video_instance.download_video.return_value = "downloaded_video.mp4"
+
+        mock_result = JudgeOutput(
+            is_ai_generated=False, authenticity_score=0.9, virality_score=80.0, target_audience=[], reasoning=""
+        )
+        mock_judge_instance.analyze_content.return_value = mock_result
+        
+        # Execute with --url and --mock
+        result = runner.invoke(app, ["--url", "http://example.com/video", "--mock"])
+        
+        # Verify
+        assert result.exit_code == 0
+        mock_video_instance.download_video.assert_called_once_with("http://example.com/video")
+        assert "Video downloaded to: downloaded_video.mp4" in result.stdout
+
+    @patch('main.LocalVideoProcessor')
+    def test_analyze_command_url_failure(self, mock_video_cls):
+        # Setup
+        mock_video_instance = MagicMock()
+        mock_video_cls.return_value = mock_video_instance
+        mock_video_instance.download_video.side_effect = Exception("Download error")
+
+        # Execute
+        result = runner.invoke(app, ["--url", "http://example.com/bad", "--mock"])
+        
+        # Verify
+        assert result.exit_code == 1
+        assert "Download Failed:" in result.stdout
+        assert "Download error" in result.stdout
+
+    @patch('main.JudgeService')
+    @patch('main.MockLLMProvider')
+    @patch('main.LocalVideoProcessor')
+    def test_analyze_command_url_and_video_warning(self, mock_video_cls, mock_llm_cls, mock_judge_cls):
+        # Setup
+        mock_video_instance = MagicMock()
+        mock_video_cls.return_value = mock_video_instance
+        mock_video_instance.download_video.return_value = "downloaded.mp4"
+        
+        mock_judge_instance = MagicMock()
+        mock_judge_cls.return_value = mock_judge_instance
+        mock_judge_instance.analyze_content.return_value = JudgeOutput(
+            is_ai_generated=False, authenticity_score=0, virality_score=0, target_audience=[], reasoning=""
+        )
+
+        # Execute with both --video and --url
+        result = runner.invoke(app, ["--url", "http://example.com", "--video", "local.mp4", "--mock"])
+        
+        # Verify
+        assert result.exit_code == 0
+        assert "Warning:" in result.stdout
+        assert "Ignoring --video and using URL" in result.stdout
+        mock_video_instance.download_video.assert_called_once()

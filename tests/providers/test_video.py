@@ -54,3 +54,25 @@ class TestLocalVideoProcessor:
         
         with pytest.raises(FileNotFoundError):
             processor.process_video("bad_path.mp4")
+
+    @patch('providers.video.yt_dlp.YoutubeDL')
+    def test_download_video_success(self, mock_ytdl_cls):
+        # Setup
+        mock_ytdl = MagicMock()
+        mock_ytdl_cls.return_value.__enter__.return_value = mock_ytdl
+        
+        # Mock extract_info result
+        mock_info = {'id': 'test_video', 'ext': 'mp4'}
+        mock_ytdl.extract_info.return_value = mock_info
+        
+        # Mock prepare_filename
+        expected_path = "/tmp/test_video.mp4"
+        mock_ytdl.prepare_filename.return_value = expected_path
+        
+        # Execute
+        processor = LocalVideoProcessor()
+        result = processor.download_video("https://youtube.com/watch?v=123")
+        
+        # Verify
+        assert result == expected_path
+        mock_ytdl.extract_info.assert_called_with("https://youtube.com/watch?v=123", download=True)

@@ -3,6 +3,7 @@ from unittest.mock import Mock, MagicMock
 from services.judge_service import JudgeService
 from schemas import ContentInput, JudgeOutput
 from interfaces.protocols import LLMProviderProtocol, VideoProcessorProtocol
+from schemas import VideoAnalysisResult
 
 class TestJudgeService:
     @pytest.fixture
@@ -38,7 +39,8 @@ class TestJudgeService:
 
         # Verify
         assert result == expected_output
-        mock_video.extract_summary.assert_not_called()
+        assert result == expected_output
+        mock_video.process_video.assert_not_called()
         
         # Verify prompt construction contains text but not video
         args, _ = mock_llm.generate_judgment.call_args
@@ -46,7 +48,8 @@ class TestJudgeService:
         # actually generate_judgment takes prompt as kwarg or pos.
         # Let's check call_args strictly if possible
         assert "Text Content:\nTest content" in prompt
-        assert "Video Analysis:" not in prompt
+        assert "Text Content:\nTest content" in prompt
+        assert "Video Technical Metadata" not in prompt
 
     def test_analyze_content_with_video(self):
         # Setup
@@ -58,7 +61,15 @@ class TestJudgeService:
         input_data = ContentInput(text=None, video_path=video_path)
         video_summary = "A video of a cat."
         
-        mock_video.extract_summary.return_value = video_summary
+        mock_result = VideoAnalysisResult(
+            video_path=video_path,
+            duration=10.0,
+            frame_paths=["frame1.jpg"],
+            audio_path="audio.mp3",
+            metadata="Resolution: 1080p"
+        )
+        
+        mock_video.process_video.return_value = mock_result
         mock_llm.generate_judgment.return_value = JudgeOutput(
             is_ai_generated=False,
             authenticity_score=0.8,
@@ -71,12 +82,14 @@ class TestJudgeService:
         service.analyze_content(input_data)
 
         # Verify
-        mock_video.extract_summary.assert_called_once_with(video_path)
+        # Verify
+        mock_video.process_video.assert_called_once_with(video_path)
         
         # Check prompt contains video summary
         call_args = mock_llm.generate_judgment.call_args
         prompt = call_args[1].get('prompt') or call_args[0][0]
-        assert f"Video Analysis:\n{video_summary}" in prompt
+        prompt = call_args[1].get('prompt') or call_args[0][0]
+        assert "Video Technical Metadata:\nResolution: 1080p" in prompt
 
     def test_analyze_content_with_context(self):
         # Setup

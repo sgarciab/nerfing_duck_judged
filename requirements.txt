@@ -5,3 +5,6 @@ python-dotenv
 rich
 opencv-python
 moviepy
+yt-dlp
+pytest
+pytest-cov

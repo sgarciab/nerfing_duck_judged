@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 from moviepy import VideoFileClip
+import yt_dlp
 from interfaces.protocols import VideoProcessorProtocol
 from schemas import VideoAnalysisResult
 
@@ -87,3 +88,30 @@ class LocalVideoProcessor(VideoProcessorProtocol):
                 
         cap.release()
         return frames
+
+    def download_video(self, url: str) -> str:
+        """
+        Downloads a video from a URL (e.g. YouTube) to a temporary file.
+        Returns the path to the downloaded video.
+        """
+        temp_dir = tempfile.gettempdir()
+        # Template for output filename
+        out_tmpl = os.path.join(temp_dir, '%(id)s.%(ext)s')
+        
+        ydl_opts = {
+            'format': 'best[ext=mp4]/best',  # Prefer MP4 for compatibility
+            'outtmpl': out_tmpl,
+            'quiet': True,
+            'no_warnings': True,
+        }
+        
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                # yt-dlp returns the filename, but sometimes it changes if it merges formats
+                # extract_info with download=True returns a dict info. 
+                # We can reconstruct the filename or use 'prepare_filename'
+                filename = ydl.prepare_filename(info)
+                return filename
+        except Exception as e:
+            raise RuntimeError(f"Failed to download video: {e}")
