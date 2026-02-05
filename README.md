@@ -1,9 +1,36 @@
 # FeltSense Challenge
 
-![Tests](https://img.shields.io/badge/tests-passing-green) ![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-failing-red) ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
 
 ## Overview
 FeltSense is a content intelligence layer designed to navigate the "Post-Truth" internet. This repository contains the backend challenge for building the "Judge Agent".
+
+## 🐳 Quick Start with Docker (Recommended)
+
+Want to run the whole app without installing Python or Node.js locally? We've got you covered!
+
+### 1. Run Everything
+To start both the Backend (API) and Frontend:
+```bash
+docker-compose up --build
+```
+- **Frontend**: Open [http://localhost:3000](http://localhost:3000)
+- **Backend API**: Running at [http://localhost:8000](http://localhost:8000)
+
+### 2. Run the CLI
+You can also use the Typer CLI within the Docker container to analyze content independently:
+
+**Analyze Text:**
+```bash
+docker-compose run --rm backend python main.py "Suspicious crypto scheme" --mock
+```
+
+**Analyze YouTube Video:**
+```bash
+docker-compose run --rm backend python main.py --url https://www.youtube.com/watch?v=dQw4w9WgXcQ
+```
+
+---
 
 ## Setup
 

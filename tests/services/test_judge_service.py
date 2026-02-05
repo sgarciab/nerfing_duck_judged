@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 from services.judge_service import JudgeService
 from schemas import ContentInput, JudgeOutput
 from interfaces.protocols import LLMProviderProtocol, VideoProcessorProtocol
@@ -109,3 +109,36 @@ class TestJudgeService:
         call_args = mock_llm.generate_judgment.call_args
         prompt = call_args[1].get('prompt') or call_args[0][0]
         assert "Additional Context:\nPosted on TikTok" in prompt
+
+    @patch('services.judge_service.os.remove')
+    @patch('services.judge_service.os.path.exists')
+    def test_cleanup_resources(self, mock_exists, mock_remove):
+        # Setup
+        mock_llm = Mock(spec=LLMProviderProtocol)
+        mock_video = Mock(spec=VideoProcessorProtocol)
+        service = JudgeService(mock_llm, mock_video)
+        
+        video_path = "test.mp4"
+        input_data = ContentInput(text=None, video_path=video_path)
+        
+        mock_result = VideoAnalysisResult(
+            video_path=video_path,
+            duration=1.0,
+            frame_paths=["frame1.jpg", "frame2.jpg"],
+            audio_path="audio.mp3",
+            metadata=""
+        )
+        mock_video.process_video.return_value = mock_result
+        mock_llm.generate_judgment.return_value = JudgeOutput(
+            is_ai_generated=False, authenticity_score=0, virality_score=0, target_audience=[], reasoning=""
+        )
+        mock_exists.return_value = True
+
+        # Execute
+        service.analyze_content(input_data)
+
+        # Verify
+        assert mock_remove.call_count == 3  # 2 frames + 1 audio
+        mock_remove.assert_any_call("frame1.jpg")
+        mock_remove.assert_any_call("frame2.jpg")
+        mock_remove.assert_any_call("audio.mp3")

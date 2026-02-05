@@ -4,3 +4,5 @@ omit =
     .venv/*
     setup_venv.sh
     */__init__.py
+    */dependency_injector/*
+    frontend/*

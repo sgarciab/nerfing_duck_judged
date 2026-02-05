@@ -1,5 +1,6 @@
 import cv2
 import tempfile
+import logging
 import os
 from pathlib import Path
 from typing import List, Optional
@@ -18,7 +19,6 @@ class LocalVideoProcessor(VideoProcessorProtocol):
         if not os.path.exists(path_str):
             raise FileNotFoundError(f"Could not open video file: {path_str}")
 
-        # 1. Extract Metadata using OpenCV
         cap = cv2.VideoCapture(path_str)
         if not cap.isOpened():
              raise FileNotFoundError(f"Could not open video file with cv2: {path_str}")
@@ -30,10 +30,8 @@ class LocalVideoProcessor(VideoProcessorProtocol):
         duration = frame_count / fps if fps > 0 else 0
         cap.release()
 
-        # 2. Extract Audio
         audio_path = self._extract_audio(path_str)
 
-        # 3. Extract Frames (Sample 5 frames evenly distributed)
         frame_paths = self._extract_frames(path_str, duration, num_frames=5)
         
         metadata = (
@@ -58,12 +56,10 @@ class LocalVideoProcessor(VideoProcessorProtocol):
                 temp_dir = tempfile.gettempdir()
                 audio_path = os.path.join(temp_dir, f"audio_{os.path.basename(video_path)}.mp3")
                 
-                # Check if we should overwrite? Ideally yes for temp.
-                # Write audio file
                 clip.audio.write_audiofile(audio_path, logger=None)
                 return audio_path
         except Exception as e:
-            print(f"Warning: Audio extraction failed: {e}")
+            logging.warning(f"Audio extraction failed: {e}")
             return None
 
     def _extract_frames(self, video_path: str, duration: float, num_frames: int) -> List[str]:
@@ -95,11 +91,10 @@ class LocalVideoProcessor(VideoProcessorProtocol):
         Returns the path to the downloaded video.
         """
         temp_dir = tempfile.gettempdir()
-        # Template for output filename
         out_tmpl = os.path.join(temp_dir, '%(id)s.%(ext)s')
         
         ydl_opts = {
-            'format': 'best[ext=mp4]/best',  # Prefer MP4 for compatibility
+            'format': 'best[ext=mp4]/best',  
             'outtmpl': out_tmpl,
             'quiet': True,
             'no_warnings': True,
@@ -108,9 +103,6 @@ class LocalVideoProcessor(VideoProcessorProtocol):
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                # yt-dlp returns the filename, but sometimes it changes if it merges formats
-                # extract_info with download=True returns a dict info. 
-                # We can reconstruct the filename or use 'prepare_filename'
                 filename = ydl.prepare_filename(info)
                 return filename
         except Exception as e:

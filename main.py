@@ -1,19 +1,23 @@
 import typer
 import os
+import logging
 from typing import Optional
 from typing_extensions import Annotated
 from rich.console import Console
 from rich.panel import Panel
-from rich.json import JSON
 from dotenv import load_dotenv
 
-from services.judge_service import JudgeService
-from providers.llm import OpenAIProvider, MockLLMProvider
-from providers.video import LocalVideoProcessor
+from containers import Container
 from schemas import ContentInput, JudgeOutput
 
-# Load env variables (e.g. OPENAI_API_KEY)
+# Load env variables
 load_dotenv()
+
+# Configure Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = typer.Typer(help="FeltSense Judge Agent CLI")
 console = Console()
@@ -34,48 +38,42 @@ def analyze(
         console.print("[bold red]Error:[/bold red] You must provide text content, a --video path, or a --url.")
         raise typer.Exit(code=1)
 
-    # 1. Wire Dependencies (Composition Root)
-    video_processor = LocalVideoProcessor()
+    # 1. Initialize Container
+    container = Container()
     
-    if mock:
-        console.print("[yellow]Running in MOCK mode. No API tokens will be used.[/yellow]")
-        llm_provider = MockLLMProvider()
-    else:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            console.print("[bold red]Error:[/bold red] OPENAI_API_KEY not found in environment. Use --mock to test without it.")
-            raise typer.Exit(code=1)
-        llm_provider = OpenAIProvider(api_key=api_key, model=model)
+    # Configure Container
+    container.config.openai_api_key.from_env("OPENAI_API_KEY")
+    container.config.model.from_value(model)
+    
+    # Set LLM Mode
+    mode = "mock" if mock else "openai"
+    container.config.llm_mode.from_value(mode)
 
-    judge = JudgeService(llm_provider=llm_provider, video_processor=video_processor)
+    # Validate API Key if not mock
+    if not mock and not os.getenv("OPENAI_API_KEY"):
+        console.print("[bold red]Error:[/bold red] OPENAI_API_KEY not found in environment. Use --mock to test without it.")
+        raise typer.Exit(code=1)
 
-    # Handle Video Download if URL provided
-    video_path = video
-    if url:
-        if video:
-            console.print("[bold yellow]Warning:[/bold yellow] Both --video and --url provided. Ignoring --video and using URL.")
-        
-        with console.status(f"[bold green]Downloading video from {url}...[/bold green]"):
-            try:
-                video_path = video_processor.download_video(url)
-                console.print(f"[green]Video downloaded to: {video_path}[/green]")
-            except Exception as e:
-                console.print(f"[bold red]Download Failed:[/bold red] {e}")
-                raise typer.Exit(code=1)
+    # Resolve Service
+    judge = container.judge_service()
 
     # 2. Prepare Input
     input_data = ContentInput(
         text=content,
-        video_path=video_path,
+        video_path=video,
+        url=url,
         context=context
     )
 
     # 3. Execute
-    with console.status("[bold green]Agent is thinking...[/bold green]"):
+    with console.status("[bold green]Agent is thinking (and processing video if needed)...[/bold green]"):
         try:
             result: JudgeOutput = judge.analyze_content(input_data)
+        except (FileNotFoundError, RuntimeError) as e:
+             console.print(f"[bold red]Analysis Error:[/bold red] {e}")
+             raise typer.Exit(code=1)
         except Exception as e:
-            console.print(f"[bold red]Analysis Failed:[/bold red] {e}")
+            console.print(f"[bold red]Unexpected Failure:[/bold red] {e}")
             raise typer.Exit(code=1)
 
     # 4. Render Output

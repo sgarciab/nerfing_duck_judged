@@ -8,13 +8,12 @@ runner = CliRunner()
 
 class TestMainCLI:
     
-    @patch('main.JudgeService')
-    @patch('main.OpenAIProvider')
-    @patch('main.LocalVideoProcessor')
-    def test_analyze_command_success_text(self, mock_video_cls, mock_openai_cls, mock_judge_cls):
-        # Setup
-        mock_judge_instance = MagicMock()
-        mock_judge_cls.return_value = mock_judge_instance
+    @patch('main.Container')
+    def test_analyze_command_success_text(self, mock_container_cls):
+        # Setup Dependency Injection Mocks
+        mock_container = mock_container_cls.return_value
+        mock_judge = MagicMock()
+        mock_container.judge_service.return_value = mock_judge
         
         # Return a valid JudgeOutput
         mock_result = JudgeOutput(
@@ -24,36 +23,41 @@ class TestMainCLI:
             target_audience=["Everyone"],
             reasoning="Because I said so"
         )
-        mock_judge_instance.analyze_content.return_value = mock_result
+        mock_judge.analyze_content.return_value = mock_result
         
-        # Mock ENV for API Key check
+        # Execute
         with patch.dict('os.environ', {'OPENAI_API_KEY': 'test-key'}):
             result = runner.invoke(app, ["Hello World"])
         
+        # Verify
         assert result.exit_code == 0
         assert "Authenticity Score: 0.9" in result.stdout
         assert "Because I said so" in result.stdout
         
-        # Verify dependencies wired correctly
-        mock_openai_cls.assert_called_once()
-        mock_video_cls.assert_called_once()
-        mock_judge_cls.assert_called_once()
+        # Verify wiring
+        mock_container.judge_service.assert_called_once()
+        mock_judge.analyze_content.assert_called_once()
 
-    @patch('main.JudgeService')
-    @patch('main.MockLLMProvider')
-    def test_analyze_command_mock_mode(self, mock_llm_cls, mock_judge_cls):
-        mock_judge_instance = MagicMock()
-        mock_judge_cls.return_value = mock_judge_instance
-        mock_result = JudgeOutput(
-            is_ai_generated=True, authenticity_score=0, virality_score=0, target_audience=[], reasoning=""
-        )
-        mock_judge_instance.analyze_content.return_value = mock_result
+    @patch('main.Container')
+    def test_analyze_command_mock_mode(self, mock_container_cls):
+        # Setup
+        mock_container = mock_container_cls.return_value
+        mock_judge = MagicMock()
+        mock_container.judge_service.return_value = mock_judge
         
+        mock_result = JudgeOutput(
+            is_ai_generated=True, authenticity_score=0, virality_score=0, target_audience=[], reasoning="Mock reasoning"
+        )
+        mock_judge.analyze_content.return_value = mock_result
+        
+        # Execute
         result = runner.invoke(app, ["Test", "--mock"])
         
+        # Verify
         assert result.exit_code == 0
-        assert "Running in MOCK mode" in result.stdout
-        mock_llm_cls.assert_called_once()
+        # Check that configuration was set
+        mock_container.config.llm_mode.from_value.assert_called_with("mock")
+        mock_judge.analyze_content.assert_called_once()
 
     def test_analyze_missing_args(self):
         result = runner.invoke(app, [])
@@ -61,72 +65,71 @@ class TestMainCLI:
         assert "You must provide text content, a --video path, or a --url" in result.stdout
 
     @patch.dict('os.environ', {}, clear=True)
-    def test_analyze_missing_api_key(self):
-        # Ensure no API key in env
+    @patch('main.Container')
+    def test_analyze_missing_api_key(self, mock_container_cls):
+        # Setup container but logic fails before calling judge if no key
+        # Actually logic is: instantiate container, configure, THEN check env var manually in main.py
+        
+        # Execute
         result = runner.invoke(app, ["Test"])
         assert result.exit_code == 1
         assert "OPENAI_API_KEY not found" in result.stdout
 
-    @patch('main.JudgeService')
-    @patch('main.MockLLMProvider')
-    @patch('main.LocalVideoProcessor')
-    def test_analyze_command_url_success(self, mock_video_cls, mock_llm_cls, mock_judge_cls):
+    @patch('main.Container')
+    def test_analyze_command_url_success(self, mock_container_cls):
         # Setup
-        mock_judge_instance = MagicMock()
-        mock_judge_cls.return_value = mock_judge_instance
+        mock_container = mock_container_cls.return_value
+        mock_judge = MagicMock()
+        mock_container.judge_service.return_value = mock_judge
         
-        mock_video_instance = MagicMock()
-        mock_video_cls.return_value = mock_video_instance
-        mock_video_instance.download_video.return_value = "downloaded_video.mp4"
-
         mock_result = JudgeOutput(
             is_ai_generated=False, authenticity_score=0.9, virality_score=80.0, target_audience=[], reasoning=""
         )
-        mock_judge_instance.analyze_content.return_value = mock_result
+        mock_judge.analyze_content.return_value = mock_result
         
         # Execute with --url and --mock
         result = runner.invoke(app, ["--url", "http://example.com/video", "--mock"])
         
         # Verify
         assert result.exit_code == 0
-        mock_video_instance.download_video.assert_called_once_with("http://example.com/video")
-        assert "Video downloaded to: downloaded_video.mp4" in result.stdout
+        # Download message is gone from main.py, so we just check success
+        mock_judge.analyze_content.assert_called_once()
+        # Verify arguments passed to judge contain the URL
+        call_args = mock_judge.analyze_content.call_args[0][0] # first arg (ContentInput)
+        assert call_args.url == "http://example.com/video"
 
-    @patch('main.LocalVideoProcessor')
-    def test_analyze_command_url_failure(self, mock_video_cls):
+    @patch('main.Container')
+    def test_analyze_command_analysis_failure(self, mock_container_cls):
         # Setup
-        mock_video_instance = MagicMock()
-        mock_video_cls.return_value = mock_video_instance
-        mock_video_instance.download_video.side_effect = Exception("Download error")
+        mock_container = mock_container_cls.return_value
+        mock_judge = MagicMock()
+        mock_container.judge_service.return_value = mock_judge
+        
+        # Simulate RuntimeError (e.g. from failed download or analysis)
+        mock_judge.analyze_content.side_effect = RuntimeError("Something went wrong")
 
         # Execute
-        result = runner.invoke(app, ["--url", "http://example.com/bad", "--mock"])
+        result = runner.invoke(app, ["Test Content", "--mock"])
         
         # Verify
         assert result.exit_code == 1
-        assert "Download Failed:" in result.stdout
-        assert "Download error" in result.stdout
+        assert "Analysis Error:" in result.stdout
+        assert "Something went wrong" in result.stdout
 
-    @patch('main.JudgeService')
-    @patch('main.MockLLMProvider')
-    @patch('main.LocalVideoProcessor')
-    def test_analyze_command_url_and_video_warning(self, mock_video_cls, mock_llm_cls, mock_judge_cls):
+    @patch('main.Container')
+    def test_analyze_command_unexpected_exception(self, mock_container_cls):
         # Setup
-        mock_video_instance = MagicMock()
-        mock_video_cls.return_value = mock_video_instance
-        mock_video_instance.download_video.return_value = "downloaded.mp4"
+        mock_container = mock_container_cls.return_value
+        mock_judge = MagicMock()
+        mock_container.judge_service.return_value = mock_judge
         
-        mock_judge_instance = MagicMock()
-        mock_judge_cls.return_value = mock_judge_instance
-        mock_judge_instance.analyze_content.return_value = JudgeOutput(
-            is_ai_generated=False, authenticity_score=0, virality_score=0, target_audience=[], reasoning=""
-        )
+        # Simulate generic Exception
+        mock_judge.analyze_content.side_effect = Exception("Crash")
 
-        # Execute with both --video and --url
-        result = runner.invoke(app, ["--url", "http://example.com", "--video", "local.mp4", "--mock"])
+        # Execute
+        result = runner.invoke(app, ["Test Content", "--mock"])
         
         # Verify
-        assert result.exit_code == 0
-        assert "Warning:" in result.stdout
-        assert "Ignoring --video and using URL" in result.stdout
-        mock_video_instance.download_video.assert_called_once()
+        assert result.exit_code == 1
+        assert "Unexpected Failure:" in result.stdout
+        assert "Crash" in result.stdout

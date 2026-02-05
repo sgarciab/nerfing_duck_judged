@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the current directory for development (optional, but requested for 'testing the whole application')
+      # Actually, for a stable 'run', copying is safer as per Dockerfile. 
+      # But mounting allows live code changes if we run default command. 
+      # Since the Dockerfile COPIES, let's just stick to the image content for stability unless dev is needed.
+      # However, for the CLI to access local files (like videos) passed as arguments, we might need volume mapping if using absolute paths.
+      # For now, let's keep it simple. Users can mount volumes via CLI if needed.
+      - .:/app
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_MODE=${LLM_MODE:-openai}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+    # Keep container running if we want to exec into it easily, or just let it run the API
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

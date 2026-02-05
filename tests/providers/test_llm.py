@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock, MagicMock, patch, mock_open
 from providers.llm import MockLLMProvider, OpenAIProvider
 from schemas import JudgeOutput
+import logging
 
 class TestMockLLMProvider:
     def test_generate_judgment_returns_static_response(self):
@@ -78,6 +79,33 @@ class TestOpenAIProvider:
         assert "base64" in content[1]['image_url']['url']
 
     @patch('providers.llm.OpenAI')
+    @patch('providers.llm.logging.warning')
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'fake-key'})
+    def test_generate_judgment_image_failure(self, mock_warning, mock_openai_cls):
+        # Mock client
+        mock_client = MagicMock()
+        mock_openai_cls.return_value = mock_client
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(parsed=MagicMock()))]
+        mock_client.beta.chat.completions.parse.return_value = mock_completion
+        
+        provider = OpenAIProvider()
+        
+        # Mock open to fail
+        with patch("builtins.open", side_effect=IOError("File not found")):
+            # Should not crash, just warn and proceed without image
+            provider.generate_judgment(prompt="Look", image_paths=["/tmp/bad.jpg"])
+            
+        mock_warning.assert_called_once()
+        
+        # Verify call content has no images
+        call_kwargs = mock_client.beta.chat.completions.parse.call_args.kwargs
+        content = call_kwargs['messages'][1]['content']
+        assert len(content) == 1 # Only text
+        assert content[0]['type'] == 'text'
+
+
+    @patch('providers.llm.OpenAI')
     @patch.dict('os.environ', {'OPENAI_API_KEY': 'fake-key'})
     def test_transcribe_audio(self, mock_openai_cls):
         mock_client = MagicMock()
@@ -91,6 +119,21 @@ class TestOpenAIProvider:
             
         assert result == "Transcribed text"
         mock_client.audio.transcriptions.create.assert_called_once()
+        
+    @patch('providers.llm.OpenAI')
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'fake-key'})
+    def test_transcribe_audio_failure(self, mock_openai_cls):
+        mock_client = MagicMock()
+        mock_openai_cls.return_value = mock_client
+        mock_client.audio.transcriptions.create.side_effect = Exception("Whisper Fail")
+        
+        provider = OpenAIProvider()
+        
+        with patch("builtins.open", mock_open(read_data=b"fake-audio")):
+            with pytest.raises(RuntimeError) as excinfo:
+                provider.transcribe_audio("audio.mp3")
+                
+        assert "OpenAI Whisper Error" in str(excinfo.value)
 
     @patch('providers.llm.OpenAI')
     def test_generate_judgment_propagates_error(self, mock_openai_cls):

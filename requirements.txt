@@ -8,3 +8,7 @@ moviepy
 yt-dlp
 pytest
 pytest-cov
+fastapi
+uvicorn
+dependency-injector
+python-multipart

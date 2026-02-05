@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import logging
 from typing import Optional, List
 from interfaces.protocols import LLMProviderProtocol
 from schemas import JudgeOutput
@@ -56,7 +57,7 @@ class OpenAIProvider(LLMProviderProtocol):
                         }
                     })
                 except Exception as e:
-                    print(f"Warning: Could not process image {img_path}: {e}")
+                    logging.warning(f"Warning: Could not process image {img_path}: {e}")
 
         try:
             completion = self.client.beta.chat.completions.parse(

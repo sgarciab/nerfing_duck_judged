@@ -17,6 +17,7 @@ class ContentInput(BaseModel):
     """
     text: Optional[str] = None
     video_path: Optional[str] = None
+    url: Optional[str] = Field(None, description="URL to video content (e.g. YouTube).")
     context: Optional[str] = Field(None, description="Optional extra context about the content.")
 
 class VideoAnalysisResult(BaseModel):
