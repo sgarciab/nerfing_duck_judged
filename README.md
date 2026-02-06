@@ -97,6 +97,14 @@ If this were moving to production, I would prioritize the following:
 9.  **Emotion Analysis:**
     * Use a pre-trained model to analyze the emotions in the video and the audio.
 
+10. **AI Safety & Security Layer:**
+    * **Anti-Hallucination (Ragas Integration):**
+        * Implement the **Ragas** framework to score every "Judge" output.
+        * specifically tracking the **Faithfulness Metric** (ensuring the verdict is grounded in the extracted video frames, not hallucinated) and **Answer Relevancy** (ensuring the "Virality Score" actually aligns with the provided distribution analysis).
+        * *Action:* If the Ragas score drops below 0.7, the system flags the result for human review rather than returning it to the user.
+    * **Prompt Injection Defense:** * Harden the input layer against "Jailbreaks" (e.g., text hidden in video frames or adversarial copy) by using XML delimiters for inputs and implementing tools like **NeMo Guardrails** or **Llama Guard** to sanitize inputs before they reach the core reasoning engine.
+    * **Bias & Fairness Auditing:** * Use Ragas to generate synthetic test sets that vary demographic attributes (e.g., gender, accent in video) to statistically verify that the "Virality Score" remains consistent regardless of the creator's identity.
+
 
 ## LOOM Video
 
