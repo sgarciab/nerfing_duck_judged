@@ -1,6 +1,6 @@
 # FeltSense Challenge
 
-![Tests](https://img.shields.io/badge/tests-passing-green) ![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-passing-green) ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
 
 ## What I Built
 I built a **Multimodal Content Intelligence System** (the "Judge Agent") designed to analyze digital content for authenticity, virality, and audience fit. The system features a **Service-Oriented Backend** (FastAPI) that orchestrates analysis logic and a **React Frontend** (Vite + Tailwind CSS) that allows users to analyze Text, Local Videos, and YouTube URLs seamlessly. If the interface is not wanted, you can always use the CLI tools directly(Typer). Examples below
@@ -96,3 +96,8 @@ If this were moving to production, I would prioritize the following:
 
 9.  **Emotion Analysis:**
     * Use a pre-trained model to analyze the emotions in the video and the audio.
+
+
+## LOOM Video
+
+https://www.loom.com/share/f5fa08dd482148c3bd66221b06f9c96d
