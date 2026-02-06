@@ -54,7 +54,7 @@ We utilize a **Layered Architecture** with **Manual Dependency Injection**. This
 
 ## 3.  Dependency Injection Strategy
 
-We avoid heavy DI frameworks (like `dependency_injector`) for this MVP to maintain velocity, but we strictly adhere to the **Dependency Inversion Principle**.
+We are using DI frameworks (like `dependency_injector`) for this MVP to maintain velocity and modularity, we strictly adhere to the **Dependency Inversion Principle**.
 
 **The Pattern:**
 Services request their dependencies in their `__init__` method. The `main.py` entry point acts as the "Composition Root" where these dependencies are wired together.
